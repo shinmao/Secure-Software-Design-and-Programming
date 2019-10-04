@@ -18,7 +18,7 @@ e.g. first, how sql connection looks like in java
 ```java
 String url = "jdbc:mysql://localhost:3306/mydb";
 Class.forName("com.mysql.jdbc.Driver").newInstance();
-Connection connection = DriverManager.gerConnection(url, "root", "root");
+Connection connection = DriverManager.getConnection(url, "root", "root");
 Statement statement = connection.createStatement();
 ResultSet result = null;
 ```
@@ -102,6 +102,88 @@ Unix-like pathname:
 * Directory separator `/`, terminated with `\0`  
 * Case sensitive  
 * Some problematic filename include Space, Control char(tab, newline, escape), non-UTF8, `-`(option mark)...  
+```sh
+cat $filename
+```
+If `$filename` include space, tab, or newline, it would separate to several filenames. Therefore, be sure to use quote to wrap it such like `cat "$filename"` unless you already know the content of variable. Otherwise, set up `$IFS` by yourself. Shell would always use the value of `$IFS` to separate and read the value.  
+```sh
+echo "$IFS" | od -b
+```
+You won't be able to see the value of `$IFS` unless you convert it into binary format.  
+There are also many problems would be caused by disaster filename.  
+```sh
+// 1.
+cat * > path
+// 2.
+for file in * ; do
+  cat "$file" >> path
+done
+// 3.
+cat $(find . -type f) > path
+// 4.
+(find . -type f | xargs cat) > path
+// 5.
+for file in ./* ; do
+  if [ -e "$file" ] ; then   // -e returns true when the target exist
+    cat "file" >> path
+  fi
+done
+// 6.
+find . -type f -print0 | xargs -0 cat
+// 7.
+find . -type f -print0 |
+while IFS="" read -r -d "" file ; do
+  cat "$file"
+done
+```
+In first case, it would be disaster if one of the filename beginning with `-`, then it would beome command option.  
+In second case, it would just show `cat: '*': No such file or directory` **if no files**.  
+What is more important, `cat` cannot walk through the directory.  
+So here are the solutions:  
+In case five, use `./*`, never use `*`. Prepend `./` to the filename can help shell consider the dash just as a filename. In addition, make sure there is a file to avoid shell consider the star sign just a filename.  
+In case six and seven, always use print0 with command find can allow filenames that contain newlines or whitespace to be correctly interpreted. The option corresponds to the -0 option of xargs.  
+> The problem exists in filename expansion, which is also called wildcard. The problem would be simpler with set -f, and the filename expansion will be disabled. But if you still need it, you would need to handle the problem with prepand ./, wrap with single quotes, make sure the content of filename and so on.
+
+## Deserialization
+Convert stream of characters back to the original object.  
+e.g.  
+Java serializable format  
+Python pickle library  
+RPC/IPC  
+Wire protocol  
+HTTP cookie  
+Solutions:  
+Use data-only format such like json?  
+Only deserialize the trusted source  
+input validation
+
+## Assume breach
+Not only depend on prevention, but also assume that already compromised.  
+Ensure that resources are also spent on detection and recovery.  
+Ensure that least privilege design principle is applied.
+
+## Call out to logging system
+Try to resue existing log systems such as log4j, java.util.logging, syslog, less code, easier to integrate.  
+But, logging system can also be vulnerability!  
+e.g.  
+take over logging system  
+forge log entries e.g. inject `%0a` with forged log and fool the log viewer  
+create attack on later retrieval  
+So, protect your log from reading or writing by untrusted user.  
+Make sure your log not include sensitive data, if is, you could use hash function.  
+
+## Check all return value of system call
+Check each system call that can returm an error detection.
+
+## Conclusion
+* Metacharacters always cause trouble.  
+* Filename could cause to disaster with filename expansion.  
+* Prepare statement to prevent SQL injection.  
+* Input validation is always not enough.  
+* support detection and recovery by logging and backup.  
+* Make sure what you send to the component.  
+* Make sure what you accept back from the component.
 
 ## Reference
-[Course material: Secure-Software-5-Call-Out](https://dwheeler.com/secure-class/presentations/Secure-Software-5-Call-Out.ppt)
+1. [Course material: Secure-Software-5-Call-Out](https://dwheeler.com/secure-class/presentations/Secure-Software-5-Call-Out.ppt)  
+2. [Explainshell](https://explainshell.com/)
