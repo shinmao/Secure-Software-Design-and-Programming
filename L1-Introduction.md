@@ -74,3 +74,49 @@ Then the user would not be able to access the subject
 **RBAC**: Role-Based Access Control  
 User is related to roles  
 roles are related to permission
+
+## Basics of Unix/Linux/POSIX
+Users & Groups:  
+Each users belongs to at least one group  
+Modern system allows user to belong to several groups  
+In android, even applications have different UID/GID  
+
+Process:  
+In window, whether a file can be executed depends on the file extension. In linux, it depends on the execution bit.  
+see running process with command:  
+```
+ps -ef
+```
+Process attributes:  
+RUID, EUID, SUID  
+Access permission of resource on system is EUID for users, which almost same to RUID.  
+SUID is different from RUID and EUID, it is binded with subject instead of user.  
+Take `/usr/bin/passwd` for example:  
+```sh
+-r-s–x–x 1 root root 21944 Feb 12  2006 /usr/bin/passwd；
+```
+To take a little introduction to the permission bit:  
+* For directory, r bit means the permission of taking a view of file list, such like `ls`.  
+* For directory, w bit means the permission of moving the file in it, such like `mv`.  
+* For directory, x bit means the permission of switching into it, such like `cd`.  
+
+For example, if you want to let everyone view your web directory, you should set up r bit and x bit for everyone at least!  
+> Pay attention! w bit would not include the permission of removal!  
+
+Why other user can change password by executing `passwd` when they forget it?  
+It is also because of SUID of `/usr/bin/passwd`.  
+The requirement is everyone can execute it.  
+When other user try to execute `/usr/bin/passwd`, the EUID of process would be changed into the root,  
+then this process temporarily gains the same permission as the root.  
+After execution finished, the EUID of process would be changed back to the user's.  
+> So, SUID is convenient, right? s bit would be always set up on x field, and only useful for binary program. The user who wants to run it should have permission of x, and he would get the permission as program's owner! If it comes to SGID, it would be set up on the x field of group, and the user who wants to run it would get the permission as program's group! SGID would be more useful if applied to the project directory. If two groups group up to work together, the group2 would like to have the same permission as group1 when they try to make some work on the directory. We can set up s bit at the group field for the directory.
+
+Umask: can be used to set default permission of created files.
+
+## Logging
+Unix/Linux/POSIX systems often record system logs by appending to text file, such as `/var/log/messages`.  
+
+## Pluggable Authentication Modules (PAM)
+Implemented in many Unix-like systems  
+Separates modules for system authentication from application, e.g. `/etc/pam.d` has config for each applications which need authentication  
+application would need to call `pam_authenticate`.
