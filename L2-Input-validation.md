@@ -128,7 +128,40 @@ if m == 0  // matched
 ...
 regfree(&compiled_pattern);
 ```  
+`java.util.regex` in java package.  
+```java
+// pattern object: a compiled representation of regex
+// matcher object: engine that interpret the pattern and perform operation against the input string  
+// PatternSyntaxException
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+Pattern nump = Pattern.compile("^[0-9]+$");
+Matcher match = nump.matcher(input);
+if(match.find()) {...}
+```  
 `findstr` works as `grep` in window.  
 Two kinds of implementations:  
-DFA: Take the whole string to match with sub-part of RE -> next sub-part of RE. DFA ony needs to scan string for one time, so it is much faster, but with few features.  
-NFA: Take the RE to match with string, if there is any substring matched, recorded and go to next part of substring. NFA is too complicated and slower work with string, but with more features. Most RE engine todays such like Perl, Ruby, Python, Java, .NET are based on NFA.  
+* DFA: Take the whole string to match with sub-part of RE -> next sub-part of RE. DFA ony needs to scan string for one time, so it is much faster, but with few features.  
+* NFA: Take the RE to match with string, if there is any substring matched, recorded and go to next part of substring. NFA is too complicated and slower work with string, but with more features. Most RE engine todays such like Perl, Ruby, Python, Java, .NET are based on NFA.  
+
+## ReDoS
+Exploding times of backtrack causes to denial of service.  
+It always happens on NFA because NFA is greedy.  
+e.g. input string: `hello.google@aaaa`  
+```php
+^[a-zA-Z0-9._]+@([a-zA-Z0-9]+.)+com$
+```  
+First, `hello.google@` would be matched by `^[a-zA-Z0-9._]+@`.  
+Second, `aaaa` would be matched by `[a-zA-Z0-9]+`.
+Third, backtrack because there is nothing left to match. `aaa` would be matched by `[a-zA-Z0-9]+`, and `a` would be matched by `.`.  
+Fourth, backtrack because there is nothing left to match `com`. `aa` would be matched by `[a-zA-Z0-9]+`, `a` would be matched by `.`.  
+Fifth, backtrack because com still no match. `a` would be matched by `[a-zA-Z0-9]+`, `a` would be matched by `.`, match still fail.  
+Sixth, backtrack because com still no match. But `[a-zA-Z0-9]+` cannot match empty string.  
+The above is how the backtrack works. Now we just need to imagine the length of the a at the end of string is very big, then the backtrack times should be also very large. This would cause a big loading to computer CPU.  
+
+What is the feature of ReDoS?  
+There would be many branches of matched string at one point. Take the example above, after the point of `@`, there are many branches of matched string such as `aaaa`, `aaa`, `aa`, `a`!  
+Solution?  
+Use NFA-to-DFA implementation  
+Use regex fuzzers and static analysis tools to verify  
+**What's the most common and efficient way, limit input size before using regex!!**
