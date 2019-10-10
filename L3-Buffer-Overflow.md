@@ -4,7 +4,7 @@ e.g. C, C++, Object-C, assembly lanaguage.
 Most language counter buffer overflow.  
 e.g. detect/prevent overflow: Ada strings, Pascal.  
 e.g. Autosize: Java, Python, perl.  
-But this doesn't mean using such we can change to use java or python to prevent buffer overflow.  
+**But this doesn't mean using such we can change to use java or python to prevent buffer overflow**.  
 Most languages implemented in C/C++.  
 Most libraries, Operation Systems include C/C++.  
 Some compiler even allows to disable protection!
@@ -80,9 +80,27 @@ If you are interested in the attacking technique, you can take a look at my repo
 
 ## Mitigation
 Checking bound, but many C functions don't check bound.  
-e.g. `gets()`, `strcpy(dest, src)`, `strcat(dest, src)`, `scanf()`...  
+e.g. `gets()`, `strcpy(dest, src)`, `strcat(dest, src)`,  
+`sprintf()`, `vsprintf()`,  
+`scanf()`, `fscanf()`, `sscanf()`, `vscanf()`...  
 
 **Bounds-checking** and **resize automatically**  
 * if oversized, stop processing input.  
 * if oversized, truncate the data. But it is still difficult, the place you truncate might be in middle of multi-byte character, or strip off the critical data...etc.  
 * Most language would resize automatically, or move string if necessary.
+
+**Safer function is hard to use correctly**  
+* There is one problem with both `strncpy()` and `strncat()`: The length in their parameters is not the buffer size. Therefore, mis-calculation would still cause to buffer overflow.  
+* If overflow happens or data discarded, neither of `strncpy` or `strncat` would give the reports.  
+* `strncpy()`: If the length of source string is equal to the length of dest string, dest string would not be terminated with NULL character.  
+* `strncpy` is safer function than `strcpy`, but it has big performance penalty. The function would append NUL character until the whole buffer is full!  
+* `sprintf()`: Format string might also prevent buffer overflow. `%10s` sets the minimum length, `%.10s` sets the maximum length. With `%.*s`, we can even pass a parameter to set up the max length, e,g, `sprintf(dst, "%.*s", maxlen, src);`  
+* `snprintf()`: always write NUL character to the end of dst string! (Good)  
+When it comes to the return value, there is difference between return value of `sprintf` and `snprintf`. `sprintf` would return the length of successfully overwritten string. `snprintf` would return the length of intended overwritten string, which means the length you planned to write into the buffer. Therefore, we can use the return value to deal with some exception: **if return value is less than 0, then there is an error, if return value is bigger or equal to the size of buffer, then string must be truncated!**  
+However, this also causes to the inefficiency of the function. Due to the reason that function want to return the value of whole string, it would keep reading to the end. **This would become a problem if input string is long or not with null character terminated.**  
+* Here is one way to make `snprintf` more safer and efficient: use `snprintf` with precision spec!  
+```c
+len = snprintf(dst, dstsize, "%.*s", (int)srcsize, src);
+if(len < 0 | len >= buflen) ...
+```  
+Here src even don't need to have NUL character because `snprintf()` would stop reading after `srcsize`!
