@@ -103,4 +103,48 @@ However, this also causes to the inefficiency of the function. Due to the reason
 len = snprintf(dst, dstsize, "%.*s", (int)srcsize, src);
 if(len < 0 | len >= buflen) ...
 ```  
-Here src even don't need to have NUL character because `snprintf()` would stop reading after `srcsize`!
+Here src even don't need to have NUL character because `snprintf()` would stop reading after `srcsize`!  
+
+**strlcpy() and strlcat()**  
+* `strlcpy(char *dst, const char *src, size_t size);` and `strlcat(char *dst, const char *src, size_t size);` are much better to use, why?  
+* The size is the buffer space! Which means it would be easier for you to calculate the space!  
+* Always terminated with NUL character if dst has any space.  
+* `strlcpy` won't fill the buffer with NUL, so won't be so inefficient such likes `strncpy`!  
+* Easy to detect with "truncation" because return value such like `snprintf`.  
+* (But still inefficient because it works like snprintf, so input string too long or not terminated with NUL would become the case!)  
+* (Easy to detect truncation, but still difficult to get the original word.)  
+What's more, these two functions are from OpenBSD developers. They are not available on Unix-like system.  
+
+**C++ std::string class**  
+* There is a solution to prevent buffer overflow with `std::string` in C++!  
+* `std::string` would automatically resize!  
+* C++ also support the class natively.  
+* However, you should avoid the use of **char* strings**.  
+It would happen because not all systems or libraries support the class.  
+Therefore, you would need to do the type-conversion.  
+Then, the buffer overflow would happen again!  
+
+**asprintf() and vasprintf()**  
+* `int asprintf(char **str-ptr, const char *fmt, ...)` and `int vasprintf(char **str-ptr, const char *fmt, va_list ap)`.  
+* after it, use `free(str-ptr)` to deallocate the buffer.  
+* return the number of bytes successfully printed, return -1 if error.  
+* You don't need to calculate the size by yourself. Function would do all the work for you, from the size of string, allocation of buffer, and written to the buffer. Looks great!  
+* Widely used to get work done without buffer overflow.  
+* This means that this function is a **hidden** `malloc()`. If you forget to `free()` the pointer, it would easy for attacker to leak the memory!  
+
+**memccpy() v.s. memcpy()**  
+* `void * memccpy(void *dst, const void *src, unsigned char ch, size_t n);` and `void * memcpy(void *dst, const void *src, size_t n)`  
+* `memcpy` would copy n characters from src to dst. **If it runs into the character ch in src, it would stop copying**. c could be `\0`.  
+* Return value would be the first address after `ch` in the src. If there is no `ch` in the first `n` bytes of src, return value would be NUL.  
+* You still need to calculate the value of size.  
+```c
+size_t dsize = sizeof(d);
+...
+char *p = memccpy(d, s1, "\0", dsize);
+dsize -= ( p - d - 1 );
+if (dsize <= 0) goto overflow...
+char *q = memccpy(p-1, s2, '\0', dsize);
+dsize -= (q - (p-1) -1);
+if (dsize <= 0) goto overflow...
+```  
+Easier but still painful...
