@@ -166,8 +166,9 @@ Compilation-time countermeasures
 gcc tools: `gcc -fsanitize=address`  
 After compiling the program and run it, it would show detailed information about some issues such like out-of-bound read, buffer overflow, use-after-free, double-free...  
 ASan uses **shadow bytes** to record memory accessibility.  
-Every 8 bytes of memory’s addressability represented by shadow byte  
-inaccessible **read zone**  
+Every 8 bytes of memory’s addressability represented by one byte of shadow byte  
+Every read/write checks shadow bytes to see if access ok.  
+use **redzone** to wrap the buffer, if buffer overflow, readzone can detect it.  
 
 > Best approach so far is to ensure code not vulnerable to buffer overflow first, everything else is second best! The easiest approach is to avoid programming language such like c/c++ and unsafe mode which lacks memory safety.
 
@@ -187,4 +188,33 @@ Most other languages include automatic garbic collection, such like Java, python
 Some program re-implement memory allocation internally.  
 But many defensive system only works for the default memory allocator such like `malloc()`.  
 If you create your own system, the defensive system might not recognize or detect the problems.  
-e.g. OpenSSL Heartbleed vulnerability undetected because such reason!
+e.g. OpenSSL Heartbleed vulnerability undetected because such reason!  
+
+## Hash Collision attack
+Hash function: takes original data to generate fixed-length output.  
+Good hash function has a uniform distrubtion of hash values.  
+Hash table is able to do insertion/lookup/removal in O(1) time, and O(n) in worst case.  
+```c
+-----
+| 0 |
+-----
+| 1 |
+-----    ----    ----    ----
+| 2 | -> |  | -> |  | -> |  |
+-----    ----    ----    ----
+| 3 |
+-----
+```  
+The worst case is that all the elements have the same hash value.  
+If attacker can predict resulting hash value that would be used:  
+* can cause a large number of data having same hash value.  
+* result in DoS because system trying to figure out the worst case.  
+Countermeasures:  
+* randomized hash functions  
+**Universal hashing**: use randomized hash functions.  
+* use another data structures  
+mapping user data to a not vulnerable predictable situation  
+* Limit the number of worst-case situation in HTTP request  
+* Limit max CPU time/request  
+* add random data to value to be hashed when development  
+If you are usng JAVA HashMap or String.hashCode  
