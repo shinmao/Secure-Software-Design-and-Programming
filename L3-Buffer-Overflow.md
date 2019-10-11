@@ -134,7 +134,7 @@ Then, the buffer overflow would happen again!
 
 **memccpy() v.s. memcpy()**  
 * `void * memccpy(void *dst, const void *src, unsigned char ch, size_t n);` and `void * memcpy(void *dst, const void *src, size_t n)`  
-* `memcpy` would copy n characters from src to dst. **If it runs into the character ch in src, it would stop copying**. c could be `\0`.  
+* `memccpy` would copy n characters from src to dst. **If it runs into the character ch in src, it would stop copying**. c could be `\0`.  
 * Return value would be the first address after `ch` in the src. If there is no `ch` in the first `n` bytes of src, return value would be NUL.  
 * You still need to calculate the value of size.  
 ```c
@@ -147,4 +147,44 @@ char *q = memccpy(p-1, s2, '\0', dsize);
 dsize -= (q - (p-1) -1);
 if (dsize <= 0) goto overflow...
 ```  
-Easier but still painful...
+Easier but still painful...  
+
+**Compiled solutions**  
+* recompiled the source code  
+* canary-based  
+stackguard  
+gcc `-fstack-protector`  
+* Libsafe  
+wrap check around traditional functions  
+examine current stack pointer and base pointer to deny the attempts to overwrite data  
+But, only protect certain functino calls, only protect certain data, thwarted by some compilter optimizations.  
+* -D_FORTIFY_SOURCE  
+replace some traditional function calls with bounds-checking version  
+Ubuntu and Fedora use both `-D_FORTIFY_SOURCE=2` and `-fstack-protector`  
+* Address sanitizer(ASan)  
+Compilation-time countermeasures  
+gcc tools: `gcc -fsanitize=address`  
+After compiling the program and run it, it would show detailed information about some issues such like out-of-bound read, buffer overflow, use-after-free, double-free...  
+ASan uses **shadow bytes** to record memory accessibility.  
+Every 8 bytes of memory’s addressability represented by shadow byte  
+inaccessible **read zone**  
+
+> Best approach so far is to ensure code not vulnerable to buffer overflow first, everything else is second best! The easiest approach is to avoid programming language such like c/c++ and unsafe mode which lacks memory safety.
+
+## Related attack
+Format string attack:  
+`printf()` can use to leak the content of memory.  
+`%n` in format string can use to overwrite momory!  
+`scanf()` accept so much data and cause to buffer overflow.  
+Attacker can determine what kind of data to enter system.  
+
+Double free:  
+C/C++ always need us to free the allocated memory manually.  
+But if we free the allocation > once, it can also corrupt internal data structure!  
+Most other languages include automatic garbic collection, such like Java, python, Perl, etc.
+
+## But don't create your own memory allocation system!  
+Some program re-implement memory allocation internally.  
+But many defensive system only works for the default memory allocator such like `malloc()`.  
+If you create your own system, the defensive system might not recognize or detect the problems.  
+e.g. OpenSSL Heartbleed vulnerability undetected because such reason!
