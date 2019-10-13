@@ -87,7 +87,11 @@ e.g. "-" U+002D v.s. "-" U+2010
 Globbing: always used to match filenames  
 * `*` to match any 0 or more characters.  
 * `?` to match any 1 character.  
+`a?`: matches a zero to one time.  
 * `[xxx]` to match characters inside  
+`[xxx]*`: matches between zero and unlimited times.  
+`[xxx]?`: matches between zero and one time.  
+`[xxx]+`: matches between one and unlimited times.  
 
 RE (regular expression):  
 **Always use ^ at the beginning and $ at the end**, which are the anchoring patterns.  
